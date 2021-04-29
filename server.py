@@ -33,8 +33,8 @@ game_msgs_types =['1\n', '2\n', '3\n', '4\n']
 gameStatus = 'connecting' # в эту переменную я буду писать разные значения в зависимости от режима программы
 players = {}
 sockets = [sys.stdin, server]
-ins, _, _ = select.select(sockets, [], [], 0)
 while gameStatus != 'over':
+        ins, _, _ = select.select(sockets, [], [], 0)
 	for i in ins:
 			if i is server:
 				if gameStatus == 'connecting':
