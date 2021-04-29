@@ -18,10 +18,10 @@ class tcolors: # я хочу сделать вывод частично цвет
 		UNDERLINE = '\033[4m'
 
 class player:
-		def __init__(self, addres, id):
+		def __init__(self, addres, uid):
 			self.msg = ''
 			self.money = 0
-			self.id = id
+			self.uid = uid
 			self.addres = addres
 
 server = socket.socket()
@@ -42,19 +42,20 @@ while gameStatus != 'over':
 					playerQuantity += 1
 					print(f'{tcolors.OKGREEN}{addrs} is connected. There {playerQuantity} player(s) on server. Press Enter to start.')
 					players[con] = player(addrs, playerQuantity)
-					con.send(connected)
+					con.send(bytes(playerQuantity))
 				elif i is sys.stdin:
 					if gameStatus == 'connecting':
+                                                i.recv(2)
 						gameStatus = 'start'
-						os.system("clear") # очищает экран терминала перед началом игры, для windows os.system("cls"), на *nix(macOs, Linux, freeBSD и тд.) как у меня
+						os.system("clear") # очищает экран терминала перед началом игры, для windows и os/2 os.system("cls"), на *nix(macOs, Linux, freeBSD и тд.) как у меня
 						for j in range(2, len(sockets)):
-							j.send('0\n')
+							sockets[j].send(b'0')
 						gameStatus = 'in game'
 				elif gameStatus == 'in game':
 					gameStatus == 'paused'
 					print('Do you want to quit game? y/n')
 				elif gameStatus == 'paused':
-					data = i.readline()
+					data = i.recv(4)
 					if data == 'n':
 						gameStatus = 'in game'
 					elif data == 'y':
@@ -68,6 +69,9 @@ while gameStatus != 'over':
 							print(f'{tcolor.WARNING}no players on server')
 							print('Game Over')
 							gameStatus = 'over'
+							for j in range(2, len(sockets)):
+                                                            sockets[j].close()
+							# здесь будет сообщение о завершении игры, но пока непонятно в каком виде
 							break
 						
 						else:
@@ -76,6 +80,5 @@ while gameStatus != 'over':
 						players.pop(i)
 					elif data in game_msgs_types:
 						players[i].msg = data
-
 
 print('Game quited')
