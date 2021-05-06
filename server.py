@@ -1,84 +1,240 @@
-    # Степан Днепров 2021 год для Предуниверсария МАИ
+# Степан Днепров 2021 год для Предуниверсария МАИ
 ''' Весь мой код по практической работе размещен на моем github, он находится в свободном доступе, за людей скопировавших этот код отвественности не несу,
-		при необходимости готов объяснить код лично, в целях доказательства подленности. Если же вы человек, который решил списать подчистую, это ваше право, я вас не заставлял'''
-import socket
-import sys
-import select
-import os # нужно для очистки экрана
+		при необходимости готов объяснить код лично, в целях доказательства подленности.
+		Если же вы человек, который решил списать подчистую, это ваше право, я вас не заставлял'''
+import socket # нужно для того, чтобы были сокеты
+import sys # нужно, чтобы был сокет sys.stdin и для определения ос, которое нужно для очистки экрана
+import select # нужно чтобы делать мультиплексирование
+import uuid # нужно для раздачи уникальных id пользователям, вообще конкретно в нашем случае это не является обязяательным, но я никогда не писал клиент-серверные приложения до этого и мне хочется сделать все как можно ближе к тому, как это делают взрослые дяди
+import os  # нужно для очистки экрана это не обязательно, но так красивее
+import random # нужно для паводка и для выбора имени компании, второе не обязательно, но я хочу, чтобы моя игра не была чистой механикой
 
-class tcolors: # я хочу сделать вывод частично цветным: новое подключение зеленым, отключение красным
-		HEADER = '\033[95m' # для этого использую escape-последоваельности
-		OKBLUE = '\033[94m'
-		OKCYAN = '\033[96m'
-		OKGREEN = '\033[92m'
-		WARNING = '\033[93m'
-		FAIL = '\033[91m'
-		ENDC = '\033[0m'
-		BOLD = '\033[1m'
-		UNDERLINE = '\033[4m'
+class Player: # да, я использую классы в питоне, как структуры в Си
+	def __init__(self, addres, companyNameIndex, uid):
+		self.msg = ''
+		self.money = 0
+		self.uid = uid
+		self.cni = companyNameIndex
+		self.companyName = companiesNames[companyNameIndex]
+		companiesNames.pop(companyNameIndex)
+		self.addres = addres
 
-class player:
-		def __init__(self, addres, uid):
-			self.msg = ''
-			self.money = 0
-			self.uid = uid
-			self.addres = addres
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(("8.8.8.8", 80))
+ip = s.getsockname()[0]
+s.close()
 
 server = socket.socket()
 server.bind(('localhost', 7777))
 server.listen(15)
 playerQuantity = 0
 print('Server launched. Waiting users...')
-game_msgs_types =['1\n', '2\n', '3\n', '4\n']
-gameStatus = 'connecting' # в эту переменную я буду писать разные значения в зависимости от режима программы
+game_msgs_types = ['1', '2', '3', '4', '5']
+# в эту переменную я буду писать разные значения в зависимости от режима программы
+gameStatus = 'connecting'
 players = {}
+polutors = [] # игроки выбравшие первую стратегию
+inspectors = [] # игроки выбравшие четвертую стратегию
+cleaners = [] # игроки выбравшие вторую стратегию
+isSomebodyChooseFive = False # переменная равна True, если хоть кто-то выбрал пятую стратегию
+needUpdateInfo = True
+needSendInfo = False
 sockets = [sys.stdin, server]
+clients = []
+
+polutiony = 0
+polutionx = 5
+polute_table = [(5, -20), (19, -8), (26, -3), (33, -3), (41, 7), (51, 14), (64, 21),
+(80, 28), (100, 35), (110, 40), (121, 63), (133, 79), (146, 92), (161, 111), (177, 127)] # сделано руками
+companiesNames = ['BASF', 'Dow', 'Sinopec', 'Sabic', 'Ineos', 'Formosa Plactic', 'ExxonMobil Chemical',
+'LyondellBasell Industries', 'Mitsubishi Chemical', 'DuPont', 'LG Chem', 'Reliance Industries', 'PetroChina',
+'Air Liquide', 'Toray Industries', 'Evonik Industries', 'Covestro', 'Bayer', 'Sumitomo Chemical', 'Braskem'] # это тоже сделано руками
+winner = -1
+month = 0
+bonus = 0
+
+
+def connectPlayer():
+	global playerQuantity
+	global needUpdateInfo
+	conn, addrs = server.accept()
+	clients.append(conn)
+	playerQuantity += 1
+	cnindex = random.randint(0, len(companiesNames) - 1)
+	
+	uid = uuid.uuid4() # генерируется случайный уникальный пользовательский идентификатор, это нужно для логирования и последующей отладки
+	players[conn] = Player(addrs[0], cnindex, uid)
+	conn.send(bytes(str(uid).encode()) + (cnindex).to_bytes(1, byteorder='big'))
+	print(len(clients))
+	needUpdateInfo = True
+
+def writeInfo():
+	global gameStatus
+	global playerQuantity
+	global bonus
+	if sys.platform == 'win32':
+		os.system('cls')
+	else:
+		os.system('clear')
+	print(f'game status is {gameStatus}\n\n')
+	if gameStatus == 'connecting':
+		if playerQuantity == 0:
+			print(f'There is no players on server yet. Your ip addres is {ip}')
+		else:
+			print(f'There is(are) {playerQuantity} player(s) on server:')
+			for i in clients:
+				print(f'{players[i].companyName}\t\t{players[i].addres}')
+			print(f'\nYour ip is {ip}.\nPress enter to start game')
+	elif gameStatus == 'in game':
+		print(f'Now is month number {month}.\nPolute column is {polutionx}, polute row is {polutiony}, bonus is {bonus}\nPlayers table:')
+		for i in clients:
+			print(f'{players[i].companyName}\t\t{players[i].addres}\t\t{players[i].money}$')
+	if gameStatus == 'ended':
+		print(f'{companiesNames[winner]} win!\n\n')
+		gameStatus = 'over'
+
+def checkStepEnd(): # функция, которая проверяет все ли игроки выбрали стратегию в этом игровом месяце
+	for i in clients:
+		if players[i].msg == '':
+			return False
+	return True
+
+def gameLogic():
+	global gameStatus
+	global needUpdateInfo
+	global needSendInfo
+	global month
+	global polutionx
+	global polutiony
+	global winner
+	global bonus
+	if gameStatus == 'in game':
+		if(month <= 39) and checkStepEnd():
+			bonus = 0
+			polutors = []
+			inspectors = []
+			cleaners = []
+			isSomebodyChooseFive = False
+			for i in clients:
+				if players[i].msg == '1':
+					polutors.append(i)
+					players[i].money += polute_table[polutiony + 8][0]
+				elif players[i].msg == '2':
+					cleaners.append(i)
+					players[i].money += polute_table[polutiony + 8][1]
+				elif players[i].msg == '3':
+					players[i].money += 8
+				elif players[i].msg == '4':
+					inspectors.append(i)
+				elif players[i].msg == '5':
+					players[i].money += 8
+					isSomebodyChooseFive = True
+				players[i].msg = ''
+			if isSomebodyChooseFive:
+				for i in cleaners:
+					players[i].money += 10
+			if len(inspectors) > 0:
+				for i in polutors:
+					players[i].money -= 20
+				for i in inspectors:
+					players[i].money -= 8 // len(inspectors)
+			if len(polutors) > 3:
+				if (polutionx == 1) and (polutiony > -8):
+					polutionx = 8
+					polutiony -= 1
+				elif(polutiony > -8):
+					polutionx -= 1
+			month += 1
+			needUpdateInfo = True
+			needSendInfo = True
+			if month % 11 == 0 and month != 0:
+				bonus = random.randint(1, 12)
+				polutionx += bonus
+				while polutionx > 8:
+					polutionx -= 8
+					polutiony += 1
+		elif month == 40:
+			rich_index = 0
+			money = players[clients[0]].money
+			for i in clients:
+				if money < players[i].money:
+					rich_index = playes[i].cni
+					money = players[i].money
+			winner = rich_index + 1
+			gameStatus = 'ended'
+			needSendInfo = True
+			needUpdateInfo = True
+def sendInfo():
+	global winner
+	global playerQuantity
+	for i in clients:
+		if gameStatus == 'in game':
+			message = (playerQuantity).to_bytes(1, byteorder='big')
+			for j in clients:
+				message += ((players[j].cni).to_bytes(1, byteorder='big') + (players[j].money).to_bytes(3, byteorder='big', signed=True))
+			i.send(message + (polutionx).to_bytes(1, byteorder='big') + (polutiony).to_bytes(1, byteorder='big', signed=True))
+		elif gameStatus == 'ended':
+			i.send((winner).to_bytes(2, byteorder='big'))
+
+def startGame():
+	global needUpdateInfo
+	global gameStatus
+	global playerQuantity
+	sys.stdin.readline()
+	gameStatus = 'start'
+	for i in clients:
+		message = (playerQuantity).to_bytes(1, byteorder='big')
+		for j in clients:
+			message += (players[j].cni).to_bytes(1, byteorder='big')
+		i.send(message + (polutionx).to_bytes(1, byteorder='big') + (polutiony).to_bytes(1, byteorder='big', signed=True))
+	needUpdateInfo = True
+	gameStatus = 'in game'
+
 while gameStatus != 'over':
-        ins, _, _ = select.select(sockets, [], [], 0)
+	ins, _, _ = select.select(sockets + clients, [], [], 0)
 	for i in ins:
-			if i is server:
-				if gameStatus == 'connecting':
-					conn, addrs = server.accept()
-					playerQuantity += 1
-					print(f'{tcolors.OKGREEN}{addrs} is connected. There {playerQuantity} player(s) on server. Press Enter to start.')
-					players[con] = player(addrs, playerQuantity)
-					con.send(bytes(playerQuantity))
-				elif i is sys.stdin:
-					if gameStatus == 'connecting':
-                                                i.recv(2)
-						gameStatus = 'start'
-						os.system("clear") # очищает экран терминала перед началом игры, для windows и os/2 os.system("cls"), на *nix(macOs, Linux, freeBSD и тд.) как у меня
-						for j in range(2, len(sockets)):
-							sockets[j].send(b'0')
-						gameStatus = 'in game'
-				elif gameStatus == 'in game':
-					gameStatus == 'paused'
-					print('Do you want to quit game? y/n')
-				elif gameStatus == 'paused':
-					data = i.recv(4)
-					if data == 'n':
-						gameStatus = 'in game'
-					elif data == 'y':
-						break
-				else:
-					data = i.recv(4)
-					if data == None:
-						playerQuantity -= 1
-						print(f'{tcolor.WARNING}{addrs[i]} disconnected', end=' ')
-						if(gameStatus != 'connecting' and playerQuantity == 0):
-							print(f'{tcolor.WARNING}no players on server')
-							print('Game Over')
-							gameStatus = 'over'
-							for j in range(2, len(sockets)):
-                                                            sockets[j].close()
-							# здесь будет сообщение о завершении игры, но пока непонятно в каком виде
-							break
-						
-						else:
-							print(f'{tcolor.WARNING}{len(msgs) - 1} players on server left')
+		if i is server:
+			if gameStatus == 'connecting':
+				connectPlayer()
+		elif i == sys.stdin:
+			if gameStatus == 'connecting':
+					startGame()
+		else:
+			data = i.recv(4)
+			if not data:
+				playerQuantity -= 1
+				needUpdateInfo = True
+					
+				i.close()
+				clients.pop(clients.index(i))
+				players.pop(i)
+				if(gameStatus != 'connecting' and playerQuantity == 0):
+					print('Not enought players')
+					gameStatus = 'over'
+					break
+			else:
+				players[i].msg = data.decode()[0]
 
-						players.pop(i)
-					elif data in game_msgs_types:
-						players[i].msg = data
-
-print('Game quited')
+	gameLogic()
+	if needSendInfo:
+		sendInfo()
+		needSendInfo = False
+	if needUpdateInfo:
+		writeInfo()
+		needUpdateInfo = False
+	
+for j in range(2, len(sockets)):
+	sockets[j].close()
+print(''' #####     #    #     # #######    ####### #     # ####### ######  
+#     #   # #   ##   ## #          #     # #     # #       #     # 
+#        #   #  # # # # #          #     # #     # #       #     # 
+#  #### #     # #  #  # #####      #     # #     # #####   ######  
+#     # ####### #     # #          #     #  #   #  #       #   #   
+#     # #     # #     # #          #     #   # #   #       #    #  
+ #####  #     # #     # #######    #######    #    ####### #     # ''')
+server.close()
+input('\n\nPress enter ')
+if sys.platform == 'win32':
+	os.system('cls')
+else:
+	os.system('clear')
