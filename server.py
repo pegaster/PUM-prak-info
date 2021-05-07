@@ -29,7 +29,6 @@ server.bind(('localhost', 7777))
 server.listen(15)
 playerQuantity = 0
 print('Server launched. Waiting users...')
-game_msgs_types = ['1', '2', '3', '4', '5']
 # в эту переменную я буду писать разные значения в зависимости от режима программы
 gameStatus = 'connecting'
 players = {}
