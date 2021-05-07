@@ -25,6 +25,9 @@ ip = s.getsockname()[0]
 s.close()
 
 server = socket.socket()
+mode = True # для тестирования на одном компе True, для работы локалке False
+if mode:
+	ip = '127.0.0.1'
 server.bind(('localhost', 7777))
 server.listen(15)
 playerQuantity = 0

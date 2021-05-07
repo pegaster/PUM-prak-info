@@ -50,7 +50,7 @@ while gameStatus != 'over':
                 if gameStatus == 'configuration':
                     uid = indata[:36:].decode()
                     companyNameIndex = indata[36]
-                    print(f'{companiesNames[companyNameIndex]} is your company name')
+                    print(f'{companiesNames[companyNameIndex]} is your company name. Please wait start of the game')
                     gameStatus = 'connected'
                 elif gameStatus == 'connected':
                     playerQuantity = indata[0]
@@ -58,7 +58,7 @@ while gameStatus != 'over':
                         os.system('cls')
                     else:
                         os.system('clear')
-                    print('Game started. Player Table:')
+                    print(f'Game started. Now month number {month} line postion is {polutionx}, line number is {polutiony}\nPlayer Table:')
                     for j in range(1, playerQuantity + 1):
                         if indata[j] == companyNameIndex:
                             print(f'{bcolors.FAIL}{companiesNames[indata[j]]} \t \t 0${bcolors().ENDC}')
@@ -89,7 +89,7 @@ while gameStatus != 'over':
                         print(f'{companiesNames[indata[1]]} win')
                         gameStatus = 'over'
                     
-                print(f'server: {indata}')
+                #print(f'server: {indata}')
 input('Press enter...')
 
 
