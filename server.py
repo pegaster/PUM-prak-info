@@ -46,9 +46,10 @@ polutiony = 0
 polutionx = 5
 polute_table = [(5, -20), (19, -8), (26, -3), (33, -3), (41, 7), (51, 14), (64, 21),
 (80, 28), (100, 35), (110, 40), (121, 63), (133, 79), (146, 92), (161, 111), (177, 127)] # сделано руками
-companiesNames = ['BASF', 'Dow', 'Sinopec', 'Sabic', 'Ineos', 'Formosa Plactic', 'ExxonMobil Chemical',
+companiesNamesList = ['BASF', 'Dow', 'Sinopec', 'Sabic', 'Ineos', 'Formosa Plactic', 'ExxonMobil Chemical',
 'LyondellBasell Industries', 'Mitsubishi Chemical', 'DuPont', 'LG Chem', 'Reliance Industries', 'PetroChina',
 'Air Liquide', 'Toray Industries', 'Evonik Industries', 'Covestro', 'Bayer', 'Sumitomo Chemical', 'Braskem'] # это тоже сделано руками
+companiesNames = {i: companiesNamesList[i] for i in range(len(companiesNamesList))}
 winner = -1
 month = 0
 bonus = 0
@@ -60,7 +61,7 @@ def connectPlayer():
 	conn, addrs = server.accept()
 	clients.append(conn)
 	playerQuantity += 1
-	cnindex = random.randint(0, len(companiesNames) - 1)
+	cnindex = int(random.choice(list(companiesNames)))
 	
 	uid = uuid.uuid4() # генерируется случайный уникальный пользовательский идентификатор, это нужно для логирования и последующей отладки
 	players[conn] = Player(addrs[0], cnindex, uid)
@@ -86,11 +87,11 @@ def writeInfo():
 				print(f'{players[i].companyName}\t\t{players[i].addres}')
 			print(f'\nYour ip is {ip}.\nPress enter to start game')
 	elif gameStatus == 'in game':
-		print(f'Now is month number {month}.\nPolute column is {polutionx}, polute row is {polutiony}, bonus is {bonus}\nPlayers table:')
+		print(f'Now is month number {month}.\nLine positon is {polutionx}, line number is {polutiony}, bonus is {bonus}\nPlayers table:')
 		for i in clients:
 			print(f'{players[i].companyName}\t\t{players[i].addres}\t\t{players[i].money}$')
 	if gameStatus == 'ended':
-		print(f'{companiesNames[winner]} win!\n\n')
+		print(f'{companiesNamesList[winner]} win!\n\n')
 		gameStatus = 'over'
 
 def checkStepEnd(): # функция, которая проверяет все ли игроки выбрали стратегию в этом игровом месяце
@@ -154,13 +155,12 @@ def gameLogic():
 					polutionx -= 8
 					polutiony += 1
 		elif month == 40:
-			rich_index = 0
+			winner = players[clients[0]].cni
 			money = players[clients[0]].money
 			for i in clients:
 				if money < players[i].money:
-					rich_index = playes[i].cni
+					winer = playes[i].cni
 					money = players[i].money
-			winner = rich_index + 1
 			gameStatus = 'ended'
 			needSendInfo = True
 			needUpdateInfo = True
@@ -182,11 +182,12 @@ def startGame():
 	global playerQuantity
 	sys.stdin.readline()
 	gameStatus = 'start'
+	
+	message = (playerQuantity).to_bytes(1, byteorder='big')
+	for j in clients:
+		message += (players[j].cni).to_bytes(1, byteorder='big')
 	for i in clients:
-		message = (playerQuantity).to_bytes(1, byteorder='big')
-		for j in clients:
-			message += (players[j].cni).to_bytes(1, byteorder='big')
-		i.send(message + (polutionx).to_bytes(1, byteorder='big') + (polutiony).to_bytes(1, byteorder='big', signed=True))
+		i.send(message)
 	needUpdateInfo = True
 	gameStatus = 'in game'
 
