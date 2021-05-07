@@ -1,3 +1,4 @@
 # PUM-prak-info
 
-#### Multiplayer game
+### ecological strategy "By the Lake"
+#### I'm too lazy to write anything more
