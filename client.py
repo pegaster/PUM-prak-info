@@ -1,4 +1,4 @@
-import socket, sys, select, os
+import socket, sys, select, os, logging
 
 class bcolors:
     HEADER = '\033[95m'
@@ -10,7 +10,8 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
-
+os.system('> client.log')
+logging.basicConfig(format='%(asctime)s %(message)s', filename='client.log', datefmt='%H:%M:%S', level=logging.INFO) # здесь я задаю формат сообщений лога, файл и тип всех сообщений для более подробной информации ознакомьтесь с документацией библиотеки logging
 socket_server = socket.socket()
 server_host = socket.gethostname()
 uid = ''
@@ -32,6 +33,7 @@ companyNameIndex = 0
 server_host = input('Enter server\'s IP address: ')
 
 socket_server.connect((server_host, sport))
+logging.info(f'CONNECTED IP: {ip}')
 print('connection succesful...')
 gameStatus = 'configuration'
 sockets = [sys.stdin.fileno(), socket_server.fileno()]
@@ -39,17 +41,29 @@ while gameStatus != 'over':
     ins, _, _ = select.select(sockets, [], [], 0)
     for i in ins:
         if i is sys.stdin.fileno():
-            socket_server.send(bytes(sys.stdin.readline().encode()))
+            outdata = sys.stdin.readline()[0]
+            if ord('5') >= ord(outdata) and ord(outdata) >= ord('1'):
+                socket_server.send(bytes(outdata.encode()))
+                logging.info(f'SENT MESSAGE_VALUE: {outdata}')
+            else:
+                print('Wrong message, please try again...')
+                logging.info(f'WRONG MESSAGE MESSAGE_VALUE: {outdata}')
         elif i is socket_server.fileno():
             indata = socket_server.recv(1024)
             if not indata:
                 sockets.pop(1)
                 socket_server.close()
+                gameStatus = 'over'
             else:
-                print(gameStatus)
+                logging.info(f'RECIVED MESSAGE_VALUE: {indata}')
                 if gameStatus == 'configuration':
                     uid = indata[:36:].decode()
                     companyNameIndex = indata[36]
+                    
+                    if sys.platform == 'win32':
+                        os.system('cls')
+                    else:
+                        os.system('clear')
                     print(f'{companiesNames[companyNameIndex]} is your company name. Please wait start of the game')
                     gameStatus = 'connected'
                 elif gameStatus == 'connected':
@@ -86,10 +100,17 @@ while gameStatus != 'over':
                             players.append((indata[j], int.from_bytes(indata[j * 4 + 2 : j * 4 + 5], byteorder="big")))
                         print('Please choose next month buisness strategy:')
                     else:
-                        print(f'{companiesNames[indata[1]]} win')
+                        print(f'{companiesNames[indata[1]]} win\n')
                         gameStatus = 'over'
                     
                 #print(f'server: {indata}')
+print(''' #####     #    #     # #######    ####### #     # ####### ######  
+#     #   # #   ##   ## #          #     # #     # #       #     # 
+#        #   #  # # # # #          #     # #     # #       #     # 
+#  #### #     # #  #  # #####      #     # #     # #####   ######  
+#     # ####### #     # #          #     #  #   #  #       #   #   
+#     # #     # #     # #          #     #   # #   #       #    #  
+ #####  #     # #     # #######    #######    #    ####### #     # ''')
 input('Press enter...')
 
 

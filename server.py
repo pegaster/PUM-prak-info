@@ -8,6 +8,7 @@ import select # нужно чтобы делать мультиплексиро�
 import uuid # нужно для раздачи уникальных id пользователям, вообще конкретно в нашем случае это не является обязяательным, но я никогда не писал клиент-серверные приложения до этого и мне хочется сделать все как можно ближе к тому, как это делают взрослые дяди
 import os  # нужно для очистки экрана это не обязательно, но так красивее
 import random # нужно для паводка и для выбора имени компании, второе не обязательно, но я хочу, чтобы моя игра не была чистой механикой
+import logging # нужно для логирования
 
 class Player: # да, я использую классы в питоне, как структуры в Си
 	def __init__(self, addres, companyNameIndex, uid):
@@ -28,6 +29,8 @@ server = socket.socket()
 mode = True # для тестирования на одном компе True, для работы локалке False
 if mode:
 	ip = '127.0.0.1'
+os.system('> server.log') # очищает старый лог
+logging.basicConfig(format='%(asctime)s %(message)s', filename='server.log', datefmt='%H:%M:%S', level=logging.INFO) # здесь я задаю формат сообщений лога, файл и тип всех сообщений для более подробной информации ознакомьтесь с документацией библиотеки logging
 server.bind((ip, 7777))
 server.listen(15)
 playerQuantity = 0
@@ -68,7 +71,7 @@ def connectPlayer():
 	uid = uuid.uuid4() # генерируется случайный уникальный пользовательский идентификатор, это нужно для логирования и последующей отладки
 	players[conn] = Player(addrs[0], cnindex, uid)
 	conn.send(bytes(str(uid).encode()) + (cnindex).to_bytes(1, byteorder='big'))
-	print(len(clients))
+	logging.info(f'CONNECTED UUID: {str(uid)}, IP: {addrs[0]}, COMPANY_NAME_INDEX: {cnindex}')
 	needUpdateInfo = True
 
 def writeInfo():
@@ -79,7 +82,6 @@ def writeInfo():
 		os.system('cls')
 	else:
 		os.system('clear')
-	print(f'game status is {gameStatus}\n\n')
 	if gameStatus == 'connecting':
 		if playerQuantity == 0:
 			print(f'There is no players on server yet. Your ip addres is {ip}')
@@ -175,6 +177,7 @@ def sendInfo():
 			for j in clients:
 				message += ((players[j].cni).to_bytes(1, byteorder='big') + (players[j].money).to_bytes(3, byteorder='big', signed=True))
 			i.send(message + (polutionx).to_bytes(1, byteorder='big') + (polutiony).to_bytes(1, byteorder='big', signed=True))
+			logging.info(f'SENDT UUID: {players[i].uid}, IP: {players[i].addres}, COMPANY_NAME_INDEX: {players[i].cni}, MESSAGE_VALUE: {message  + (polutionx).to_bytes(1, byteorder="big") + (polutiony).to_bytes(1, byteorder="big", signed=True)}')
 		elif gameStatus == 'ended':
 			i.send((winner).to_bytes(2, byteorder='big'))
 
@@ -190,6 +193,7 @@ def startGame():
 		message += (players[j].cni).to_bytes(1, byteorder='big')
 	for i in clients:
 		i.send(message)
+		logging.info(f'SENT UUID: {players[i].uid}, IP: {players[i].addres}, COMPANY_NAME_INDEX: {players[i].cni}, MESSAGE_VALUE: {message}')
 	needUpdateInfo = True
 	gameStatus = 'in game'
 
@@ -200,16 +204,18 @@ while gameStatus != 'over':
 			if gameStatus == 'connecting':
 				connectPlayer()
 		elif i == sys.stdin:
-			if gameStatus == 'connecting':
-					startGame()
+			if gameStatus == 'connecting' and playerQuantity > 0:
+				startGame()
+			elif gameStatus == 'connecting' and playerQuantity == 0:
+				sys.stdin.readline()
 		else:
 			data = i.recv(4)
 			if not data:
 				playerQuantity -= 1
 				needUpdateInfo = True
-					
+				logging.info(f'DISCONNECTED UUID: {players[i].uid}, IP: {players[i].addres}, COMPANY_NAME_INDEX: {players[i].cni}')	
 				i.close()
-				clients.pop(clients.index(i))
+				clients.remove(i)
 				players.pop(i)
 				if(gameStatus != 'connecting' and playerQuantity == 0):
 					print('Not enought players')
@@ -217,6 +223,7 @@ while gameStatus != 'over':
 					break
 			else:
 				players[i].msg = data.decode()[0]
+				logging.info(f'RECIVED UUID: {players[i].uid}, IP: {players[i].addres}, COMPANY_NAME_INDEX: {players[i].cni}, MESSAGE_VALUE: {data.decode()[0]}')
 
 	gameLogic()
 	if needSendInfo:
