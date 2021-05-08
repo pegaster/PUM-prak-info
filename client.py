@@ -90,14 +90,14 @@ while gameStatus != 'over':
                     if playerQuantity != 0:
                         month += 1
                         polutionx = indata[-2]
-                        polutiony = indata[-1]
-                        print(f'In game. Now month number {month} line postion is {polutionx}, line number is {polutiony}\nPlayer Table:')
+                        polutiony = int.from_bytes(indata[len(indata) - 1 : len(indata)], byteorder='big', signed=True)
+                        print(f'In game. Now month number {month}, line postion is {polutionx}, line number is {polutiony}\nPlayer Table:')
                         for j in range(playerQuantity):
                             if indata[j * 4 + 1] == companyNameIndex:
-                                print(f'{bcolors.FAIL}{companiesNames[indata[j * 4 + 1]]} \t \t {int.from_bytes(indata[j * 4 + 2 : j * 4 + 5], byteorder="big")}${bcolors.ENDC}')
+                                print(f'{bcolors.FAIL}{companiesNames[indata[j * 4 + 1]]} \t \t {int.from_bytes(indata[(j * 4 + 2) : (j * 4 + 5)], byteorder="big", signed=True)}${bcolors.ENDC}')
                             else:
-                                print(f'{companiesNames[indata[j * 4 + 1]]} \t \t {int.from_bytes(indata[j * 4 + 2 : j * 4 + 5], byteorder="big")}$')
-                            players.append((indata[j], int.from_bytes(indata[j * 4 + 2 : j * 4 + 5], byteorder="big")))
+                                print(f'{companiesNames[indata[j * 4 + 1]]} \t \t {int.from_bytes(indata[(j * 4 + 2) : (j * 4 + 5)], byteorder="big", signed=True)}$')
+                            players.append((indata[j], int.from_bytes(indata[j * 4 + 2 : j * 4 + 5], byteorder="big", signed=True)))
                         print('Please choose next month buisness strategy:')
                     else:
                         print(f'{companiesNames[indata[1]]} win\n')

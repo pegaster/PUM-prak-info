@@ -54,7 +54,7 @@ polute_table = [(5, -20), (19, -8), (26, -3), (33, -3), (41, 7), (51, 14), (64, 
 companiesNamesList = ['BASF', 'Dow', 'Sinopec', 'Sabic', 'Ineos', 'Formosa Plactic', 'ExxonMobil Chemical',
 'LyondellBasell Industries', 'Mitsubishi Chemical', 'DuPont', 'LG Chem', 'Reliance Industries', 'PetroChina',
 'Air Liquide', 'Toray Industries', 'Evonik Industries', 'Covestro', 'Bayer', 'Sumitomo Chemical', 'Braskem'] # это тоже сделано руками
-companiesNames = {i: companiesNamesList[i] for i in range(len(companiesNamesList))}
+companiesNames = {i: companiesNamesList[i] for i in range(len(companiesNamesList))} # такая хитрая конструкция нужна чтобы имена выдавались случайно, без повторений, с сохранением индекса, а потом их значения можно было смотреть
 winner = -1
 month = 0
 bonus = 0
