@@ -9,6 +9,8 @@ import uuid # нужно для раздачи уникальных id поль�
 import os  # нужно для очистки экрана это не обязательно, но так красивее
 import random # нужно для паводка и для выбора имени компании, второе не обязательно, но я хочу, чтобы моя игра не была чистой механикой
 import logging # нужно для логирования
+if sys.platform == 'win32':
+	import msvcrt
 
 class Player: # да, я использую классы в питоне, как структуры в Си
 	def __init__(self, addres, companyNameIndex, uid):
@@ -44,7 +46,10 @@ cleaners = [] # игроки выбравшие вторую стратегию
 isSomebodyChooseFive = False # переменная равна True, если хоть кто-то выбрал пятую стратегию
 needUpdateInfo = True
 needSendInfo = False
-sockets = [sys.stdin, server]
+if sys.platform == 'win32':
+	sockets = [server]
+else:
+	sockets = [sys.stdin, server]
 clients = []
 
 polutiony = 0
@@ -199,6 +204,9 @@ def startGame():
 
 while gameStatus != 'over':
 	ins, _, _ = select.select(sockets + clients, [], [], 0)
+	if sys.platform == 'win32':
+		if msvcrt.kbhit():
+			startGame()
 	for i in ins:
 		if i is server:
 			if gameStatus == 'connecting':

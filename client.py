@@ -1,5 +1,7 @@
 import socket, sys, select, os, logging
-
+if sys.platform == 'win32':
+	import msvcrt
+message = b''
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -36,11 +38,23 @@ socket_server.connect((server_host, sport))
 logging.info(f'CONNECTED IP: {ip}')
 print('connection succesful...')
 gameStatus = 'configuration'
-sockets = [sys.stdin.fileno(), socket_server.fileno()]
+if sys.platform == 'win32':
+    sockets = [socket_server]
+else:
+    sockets = [sys.stdin, socket_server]
 while gameStatus != 'over':
     ins, _, _ = select.select(sockets, [], [], 0)
+    if sys.platform == 'win32':
+        if msvcrt.kbhit():
+            c = msvcrt.getch()
+            if c == b'\r':
+                socket_server.send(message)
+            else:
+                msvcrt.putch(c)
+                message = c
     for i in ins:
-        if i is sys.stdin.fileno():
+        
+        if i is sys.stdin:
             outdata = sys.stdin.readline()[0]
             if ord('5') >= ord(outdata) and ord(outdata) >= ord('1'):
                 socket_server.send(bytes(outdata.encode()))
@@ -48,10 +62,10 @@ while gameStatus != 'over':
             else:
                 print('Wrong message, please try again...')
                 logging.info(f'WRONG MESSAGE MESSAGE_VALUE: {outdata}')
-        elif i is socket_server.fileno():
+        elif i is socket_server:
             indata = socket_server.recv(1024)
             if not indata:
-                sockets.pop(1)
+                sockets.remove(socket_server)
                 socket_server.close()
                 gameStatus = 'over'
             else:
@@ -79,7 +93,7 @@ while gameStatus != 'over':
                         else:
                             print(f'{companiesNames[indata[j]]} \t \t 0$')
                         players.append((indata[j], 0))
-                        print('Please choose next month buisness strategy:')
+                    print('Please choose next month buisness strategy:')
                     gameStatus = 'in game'
                 elif gameStatus == 'in game':
                     playerQuantity = indata[0]
@@ -112,6 +126,4 @@ print(''' #####     #    #     # #######    ####### #     # ####### ######
 #     # #     # #     # #          #     #   # #   #       #    #  
  #####  #     # #     # #######    #######    #    ####### #     # ''')
 input('Press enter...')
-
-
 

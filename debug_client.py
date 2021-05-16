@@ -7,13 +7,11 @@ sport = 7777
 server_host = input('Enter server\'s IP address: ')
 socket_server.connect((server_host, sport))
 print('connection succesful...')
-sockets = [sys.stdin.fileno(), socket_server.fileno()]
+sockets = [socket_server]
 while True:
     ins, _, _ = select.select(sockets, [], [], 0)
     for i in ins:
-        if i is sys.stdin.fileno():
-            socket_server.send(bytes(sys.stdin.readline().encode()))
-        elif i is socket_server.fileno():
+        if i is socket_server:
             indata = socket_server.recv(1024)
             if not indata:
                 sockets.pop(1)
