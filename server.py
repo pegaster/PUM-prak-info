@@ -168,7 +168,7 @@ def gameLogic():
 			money = players[clients[0]].money
 			for i in clients:
 				if money < players[i].money:
-					winer = playes[i].cni
+					winer = players[i].cni
 					money = players[i].money
 			gameStatus = 'ended'
 			needSendInfo = True
