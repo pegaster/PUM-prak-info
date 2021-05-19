@@ -148,7 +148,7 @@ def gameLogic():
 					players[i].money -= 20
 				for i in inspectors:
 					players[i].money -= 8 // len(inspectors)
-			if len(polutors) > 3:
+			if len(polutors) > 0:
 				if (polutionx == 1) and (polutiony > -8):
 					polutionx = 8
 					polutiony -= 1
